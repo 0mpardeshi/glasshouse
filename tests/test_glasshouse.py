@@ -68,15 +68,15 @@ def test_parse_todo_file(tmp_path):
     path = tmp_path / "TODO.md"
     path.write_text(
         "# TODO\n\n"
-        "- [ ] **P0-001** **Audit archive** — lock the files\n"
-        "- [x] **P1-010** **Ponytail** — verify\n"
-        "- [!] **B-001** **GitHub** — needs auth\n",
+        "- [ ] **P0-001** **Fix the layout** — drag a block to resize\n"
+        "- [x] **P1-010** **Write the docs** — check the links\n"
+        "- [!] **B-001** **Nightly job** — needs a token\n",
         encoding="utf-8",
     )
     items = store.parse_todo_file(path)
     assert [i["id"] for i in items] == ["P0-001", "P1-010", "B-001"]
     assert items[0]["status"] == "queued"
-    assert items[0]["title"] == "Audit archive"
+    assert items[0]["title"] == "Fix the layout"
     assert items[0]["priority"] == "P0"
     assert items[1]["status"] == "done"
     assert items[2]["status"] == "blocked"
