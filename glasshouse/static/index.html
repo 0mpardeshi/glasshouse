@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Glasshouse — Admin</title>
+<link rel="icon" href="/logo.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/static/app.css">
+</head>
+<body>
+<header class="topbar">
+  <div class="brand"><img class="logo" src="/logo.svg" alt=""> GLASSHOUSE <small>owner control room</small></div>
+  <div class="nav">
+    <a href="/" class="active">Admin</a>
+    <a href="/ai">AI race</a>
+    <a href="/projects">Projects</a>
+  </div>
+  <select id="project-picker" class="picker" title="Switch project"></select>
+  <div class="spacer"></div>
+  <div class="live"><span class="dot" id="live-dot"></span><span id="live-text">connecting…</span></div>
+</header>
+
+<main class="wrap">
+  <div class="banner ok" id="integrity">Verifying the event chain…</div>
+
+  <section class="kpis">
+    <div class="kpi good"><div class="label">Working</div><div class="value" id="k-working">–</div><div class="sub">heartbeat fresh</div></div>
+    <div class="kpi warn"><div class="label">Stalled / paused</div><div class="value" id="k-stalled">–</div><div class="sub">needs a look</div></div>
+    <div class="kpi"><div class="label">Agents seen</div><div class="value" id="k-agents">–</div><div class="sub">including subagents</div></div>
+    <div class="kpi"><div class="label">Events</div><div class="value" id="k-events">–</div><div class="sub">append-only</div></div>
+    <div class="kpi"><div class="label">Files touched</div><div class="value" id="k-files">–</div><div class="sub">this project</div></div>
+  </section>
+
+  <div class="board" id="board" data-page="admin">
+    <section class="panel" data-block="agents" data-w="7" data-h="2">
+      <header><h2>Agents</h2><span class="count" id="agents-count"></span></header>
+      <div class="body flush" id="agents"><div class="empty">No agent has registered yet.</div></div>
+    </section>
+
+    <section class="panel" data-block="feed" data-w="5" data-h="2">
+      <header><h2>Live activity</h2><span class="count" id="feed-count"></span></header>
+      <div class="body flush feed" id="feed"><div class="empty">Waiting for the first event…</div></div>
+    </section>
+
+    <section class="panel" data-block="agenda" data-w="4" data-h="1">
+      <header>
+        <h2>Agenda</h2>
+        <span class="count" id="todo-count"></span>
+        <button class="iconbtn" id="todo-add" type="button" aria-expanded="false"
+                aria-controls="todo-form" title="Add an agenda item" aria-label="Add an agenda item">+</button>
+      </header>
+      <form class="inline-add" id="todo-form" hidden>
+        <input id="new-todo" placeholder="New agenda item for this project…" autocomplete="off"
+               aria-label="New agenda item">
+        <button class="btn primary" type="submit">Add</button>
+      </form>
+      <div class="body flush" id="todos"><div class="empty">TODO.md not found.</div></div>
+    </section>
+
+    <section class="panel" data-block="files" data-w="4" data-h="1">
+      <header><h2>Files changed</h2><span class="count" id="files-count"></span></header>
+      <div class="body flush" id="files"><div class="empty">No edits recorded yet.</div></div>
+    </section>
+
+    <section class="panel" data-block="connect" data-w="4" data-h="1">
+      <header><h2>How to connect</h2></header>
+      <div class="body" style="font-size:12.5px;color:var(--muted)">
+        <p style="margin-top:0">Any agent in this project can report:</p>
+        <pre class="mono" style="background:#0a1119;border:1px solid var(--line);border-radius:10px;padding:10px;overflow:auto">glass register --name builder --model MODEL \
+  --task "what it is doing"
+glass event --kind tool.call \
+  --action read --target path/to/file
+glass heartbeat --task "still working"</pre>
+        <p>Harnesses with a shell can call these directly; the OpenCode plugin does it automatically.
+        The server binds to <code>127.0.0.1</code> only and shows prompts and paths, so never expose it.</p>
+        <p><a href="/api/state">/api/state</a> · <a href="/api/events?limit=50">/api/events</a> · <a href="/api/verify">/api/verify</a></p>
+      </div>
+    </section>
+  </div>
+
+  <footer>Glasshouse · every claim here is an event, not a summary · <span id="stamp"></span></footer>
+</main>
+
+<script src="/static/app.js"></script>
+<script src="/static/layout.js"></script>
+<script src="/static/shell.js"></script>
+<script src="/static/admin.js"></script>
+</body>
+</html>

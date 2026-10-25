@@ -1,0 +1,12 @@
+#!/usr/bin/env python3
+"""Thin wrapper so any agent can type `bin/glass ...` instead of a module path."""
+import sys
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(ROOT))
+
+from glasshouse.cli import main  # noqa: E402
+
+if __name__ == "__main__":
+    raise SystemExit(main())

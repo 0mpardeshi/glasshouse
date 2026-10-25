@@ -1,0 +1,19 @@
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+.venv/
+venv/
+*.egg-info/
+build/
+dist/
+
+# local histories and identities never belong in a repository
+data/
+.glasshouse/
+*.db
+*.db-wal
+*.db-shm
+
+# OS noise
+.DS_Store

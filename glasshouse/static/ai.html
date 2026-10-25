@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Glasshouse — AI race control</title>
+<link rel="icon" href="/logo.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/static/app.css">
+</head>
+<body>
+<header class="topbar">
+  <div class="brand"><img class="logo" src="/logo.svg" alt=""> GLASSHOUSE <small>race control</small></div>
+  <div class="nav">
+    <a href="/">Admin</a>
+    <a href="/ai" class="active">AI race</a>
+    <a href="/projects">Projects</a>
+  </div>
+  <select id="project-picker" class="picker" title="Switch project"></select>
+  <div class="spacer"></div>
+  <div class="live"><span class="dot" id="live-dot"></span><span id="live-text">connecting…</span></div>
+</header>
+
+<main class="wrap">
+  <div class="banner ok" id="hint">You are looking at the machine-readable view. <a href="/api/state">/api/state</a> returns the same data as JSON.</div>
+
+  <section class="kpis">
+    <div class="kpi good"><div class="label">On track</div><div class="value" id="k-working">–</div><div class="sub">agents making progress</div></div>
+    <div class="kpi warn"><div class="label">In the pits</div><div class="value" id="k-pits">–</div><div class="sub">paused or stalled</div></div>
+    <div class="kpi"><div class="label">Laps</div><div class="value" id="k-laps">–</div><div class="sub">recorded actions</div></div>
+    <div class="kpi"><div class="label">Next up</div><div class="value" id="k-next" style="font-size:15px;line-height:1.3">–</div><div class="sub">agenda item</div></div>
+    <div class="kpi"><div class="label">Handoff risk</div><div class="value" id="k-risk">–</div><div class="sub">stale agents</div></div>
+  </section>
+
+  <div class="board" id="board" data-page="ai">
+    <section class="panel" data-block="positions" data-w="8" data-h="3">
+      <header><h2>Positions</h2><span class="count" id="pos-count"></span></header>
+      <div class="body"><div class="race" id="race"><div class="empty">No racers yet.</div></div></div>
+    </section>
+
+    <section class="panel" data-block="handoff" data-w="4" data-h="1">
+      <header><h2>If everything stops now</h2></header>
+      <div class="body" id="handoff"><div class="empty">Nothing to hand off.</div></div>
+    </section>
+
+    <section class="panel" data-block="help" data-w="4" data-h="1">
+      <header><h2>Needs a human or another agent</h2></header>
+      <div class="body" id="help"><div class="empty">Nobody is blocked.</div></div>
+    </section>
+
+    <section class="panel" data-block="feed" data-w="4" data-h="1">
+      <header><h2>Recent actions</h2></header>
+      <div class="body flush feed" id="feed"><div class="empty">No actions yet.</div></div>
+    </section>
+  </div>
+
+  <footer>Glasshouse race control · position = live status first, then recorded work · <span id="stamp"></span></footer>
+</main>
+
+<script src="/static/app.js"></script>
+<script src="/static/layout.js"></script>
+<script src="/static/shell.js"></script>
+<script src="/static/ai.js"></script>
+</body>
+</html>

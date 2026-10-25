@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Glasshouse — Projects</title>
+<link rel="icon" href="/logo.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/static/app.css">
+</head>
+<body>
+<header class="topbar">
+  <div class="brand"><img class="logo" src="/logo.svg" alt=""> GLASSHOUSE <small>projects</small></div>
+  <div class="nav">
+    <a href="/">Admin</a>
+    <a href="/ai">AI race</a>
+    <a href="/projects" class="active">Projects</a>
+  </div>
+  <div class="spacer"></div>
+  <div class="live"><span class="dot" id="live-dot"></span><span id="live-text">ready</span></div>
+</header>
+
+<main class="wrap">
+  <div class="currentbar" id="currentbar">
+    <span class="label">Working folder</span>
+    <span class="where" id="current-path">looking it up…</span>
+    <span class="badge current" id="current-badge" hidden>current</span>
+    <span class="spacer"></span>
+    <a class="btn" id="current-open" href="/" hidden>Open admin</a>
+  </div>
+
+  <div class="addbar">
+    <input id="project-path" placeholder="Folder to watch, e.g. ~/code/my-project"
+           aria-label="Folder to watch" autocomplete="off" spellcheck="false">
+    <button class="btn primary" id="add-project" type="button">Add project</button>
+    <button class="btn" id="refresh" type="button">Refresh</button>
+  </div>
+  <p class="statusline" id="add-hint" role="status" aria-live="polite">
+    Pick the folder you work in. Each folder keeps its own history, so quitting the terminal or
+    rebooting loses nothing.
+  </p>
+
+  <div class="board" id="board" data-page="projects">
+    <section class="panel" data-block="projects" data-w="12" data-h="1">
+      <header><h2>Registered projects</h2><span class="count" id="projects-count"></span></header>
+      <div class="body">
+        <div class="projects" id="projects"><div class="empty">Loading…</div></div>
+      </div>
+    </section>
+  </div>
+
+  <footer>Glasshouse · nothing is written inside your project folder · <span id="stamp"></span></footer>
+</main>
+
+<script src="/static/app.js"></script>
+<script src="/static/layout.js"></script>
+<script src="/static/shell.js"></script>
+<script src="/static/projects.js"></script>
+</body>
+</html>
