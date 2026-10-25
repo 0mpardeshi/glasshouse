@@ -115,7 +115,7 @@ Glasshouse needs **Python 3.10+** and nothing else. Pick one:
 ### 1. Run from a clone (simplest, nothing installed)
 
 ```bash
-git clone https://github.com/<you>/glasshouse.git
+git clone https://github.com/0mpardeshi/glasshouse.git
 cd glasshouse
 ./install.sh
 ```
