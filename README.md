@@ -1,9 +1,17 @@
-# Glasshouse
+<p align="center">
+  <img src="glasshouse/static/logo.png" width="112" alt="Glasshouse logo">
+</p>
 
-**A local control room for AI agents — see what they are doing, on which project, right now.**
+<h1 align="center">Glasshouse</h1>
 
-Agents write events; Glasshouse keeps them in an append-only, hash-chained log and shows them in two
-views. No cloud, no account, no telemetry, no dependencies beyond Python's standard library.
+<p align="center">
+  <b>A local control room for AI agents — see what they are doing, on which project, right now.</b>
+</p>
+
+<p align="center">
+  Agents write events; Glasshouse keeps them in an append-only, hash-chained log and shows them in
+  two views. No cloud, no account, no telemetry, no dependencies beyond Python's standard library.
+</p>
 
 - **`/` admin view** — every agent, model, task, tool call, file edit, heartbeat, pause and stall.
 - **`/ai` race view** — a compact, agent-readable "who is where and what is next" board.
