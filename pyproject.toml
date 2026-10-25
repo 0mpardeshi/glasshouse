@@ -23,7 +23,7 @@ classifiers = [
 glasshouse = "glasshouse.cli:main"
 
 [project.urls]
-Homepage = "https://github.com/"
+Homepage = "https://github.com/0mpardeshi/glasshouse"
 
 [tool.setuptools]
 packages = ["glasshouse"]
