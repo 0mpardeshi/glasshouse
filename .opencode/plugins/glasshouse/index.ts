@@ -49,7 +49,7 @@ async function post(path, body) {
   }
 }
 
-function sessionAgent(sessionID, patch = {}) {
+function sessionAgent(sessionID, patch = {}, cwd) {
   if (!sessionID) return null
   const key = String(sessionID)
   const current = sessions.get(key) || {
@@ -60,6 +60,9 @@ function sessionAgent(sessionID, patch = {}) {
     task: "",
   }
   Object.assign(current, Object.fromEntries(Object.entries(patch).filter(([, v]) => v)))
+  // The folder the session works in, never process.cwd(): the harness binary is
+  // started wherever the owner was, which may be another project entirely.
+  if (cwd) current.cwd = String(cwd)
   sessions.set(key, current)
 
   if (!current.registered) {
@@ -74,15 +77,15 @@ function sessionAgent(sessionID, patch = {}) {
       parent_id: current.parent_id || null,
       task: current.task || null,
       pid: process.pid,
-      cwd: process.cwd(),
+      cwd: current.cwd || process.cwd(),
       meta: { source: "opencode-plugin" },
     })
   }
   return current
 }
 
-function emit(sessionID, kind, action, target, status, detail, durationMs) {
-  const agent = sessionAgent(sessionID)
+function emit(sessionID, kind, action, target, status, detail, durationMs, cwd) {
+  const agent = sessionAgent(sessionID, {}, cwd)
   if (!agent) return
   post("/api/event", {
     kind,
@@ -93,6 +96,7 @@ function emit(sessionID, kind, action, target, status, detail, durationMs) {
     status: status || "ok",
     duration_ms: durationMs ?? null,
     detail: detail ?? null,
+    cwd: agent.cwd || cwd || process.cwd(),
   })
 }
 
@@ -116,10 +120,16 @@ export default {
     if (!ENABLED) return
 
     const directory = ctx?.location?.directory || process.cwd()
+    const harnessId = `oc-harness-${process.pid}`
+    // Every call says which folder it is about, so the server files it there.
+    const where = (sessionID) =>
+      sessions.get(String(sessionID || ""))?.cwd || directory
+    const report = (sessionID, kind, action, target, status, detail, ms) =>
+      emit(sessionID, kind, action, target, status, detail, ms, where(sessionID))
 
     // 1. The harness itself is an agent: if it is alive, the dashboard is honest.
     await post("/api/register", {
-      agent_id: `oc-harness-${process.pid}`,
+      agent_id: harnessId,
       name: "OpenCode",
       role: "harness",
       harness: "opencode",
@@ -130,14 +140,21 @@ export default {
       meta: { source: "opencode-plugin", version: ctx?.app?.version || null },
     })
 
-    // 2. Heartbeats keep a live session out of the "stalled" bucket.
+    // 2. Heartbeats keep a live session — and the harness — out of "stalled".
     const beat = setInterval(() => {
+      post("/api/heartbeat", {
+        agent_id: harnessId,
+        status: "working",
+        task: `watching ${directory}`,
+        cwd: directory,
+      })
       for (const [sessionID, agent] of sessions) {
         post("/api/heartbeat", {
           agent_id: agent.id,
           session_id: sessionID,
           status: "working",
           task: agent.task || null,
+          cwd: agent.cwd || directory,
         })
       }
     }, 30_000)
@@ -149,12 +166,12 @@ export default {
         try {
           const key = event?.callID || event?.id || `${event?.tool}-${Date.now()}`
           starts.set(key, Date.now())
-          const agent = sessionAgent(event?.sessionID)
+          const agent = sessionAgent(event?.sessionID, {}, directory)
           const target = targetFromArgs(event?.input ?? event?.args)
           if (agent && /^(edit|write|patch|multiedit)$/i.test(event?.tool || "") && target) {
             agent.task = `editing ${short(target)}`
           }
-          emit(event?.sessionID, "tool.call", event?.tool, target, "started")
+          report(event?.sessionID, "tool.call", event?.tool, target, "started")
         } catch {
           /* ignore */
         }
@@ -167,10 +184,10 @@ export default {
           if (key) starts.delete(key)
           const duration = started ? Date.now() - started : undefined
           const target = targetFromArgs(event?.input ?? event?.args)
-          const failed = /error|fail/i.test(String(event?.output?.title || event?.error || ""))
-          emit(event?.sessionID, "tool.call", event?.tool, target, failed ? "error" : "ok", null, duration)
+          const failed = event?.status === "error" || Boolean(event?.error)
+          report(event?.sessionID, "tool.call", event?.tool, target, failed ? "error" : "ok", null, duration)
           if (/^(edit|write|patch|multiedit)$/i.test(event?.tool || "") && target) {
-            emit(event?.sessionID, "file.edit", event.tool, target, "ok", null, duration)
+            report(event?.sessionID, "file.edit", event.tool, target, "ok", null, duration)
           }
         } catch {
           /* ignore */
@@ -188,7 +205,7 @@ export default {
             name: agentName ? String(agentName) : undefined,
             role: agentName && /critic|review/i.test(String(agentName)) ? "critic" : "builder",
             task: text ? firstName(text) : undefined,
-          })
+          }, directory)
         } catch {
           /* ignore */
         }
@@ -205,13 +222,14 @@ export default {
             const agent = sessionAgent(event.sessionID, {
               model: id ? String(id) : undefined,
               name: agentName ? String(agentName) : undefined,
-            })
+            }, directory)
             if (agent && id) {
               // sessionAgent only registers once; push the late-known model.
               post("/api/heartbeat", {
                 agent_id: agent.id,
                 session_id: event.sessionID,
                 model: String(id),
+                cwd: where(event.sessionID),
               })
             }
           }
@@ -230,28 +248,31 @@ export default {
             try {
               const { type, props } = describeEvent(event)
               if (type === "file.edited" && props.file) {
-                emit(props.sessionID, "file.edit", "changed", props.file, "ok")
+                report(props.sessionID, "file.edit", "changed", props.file, "ok")
               } else if (type === "session.status") {
                 const kind = props.status?.type || props.status
                 const status = kind === "busy" ? "working" : kind === "idle" ? "paused" : "working"
-                const agent = sessionAgent(props.sessionID, {})
+                const agent = sessionAgent(props.sessionID, {}, directory)
                 if (agent) {
                   post("/api/heartbeat", {
                     agent_id: agent.id,
                     session_id: props.sessionID,
                     status,
+                    cwd: where(props.sessionID),
                   })
                 }
               } else if (type === "session.error") {
-                emit(props.sessionID, "status", "error", null, "error",
+                report(props.sessionID, "status", "error", null, "error",
                   short(props.error?.name || "session error"))
               } else if (type === "permission.updated") {
-                emit(props.sessionID, "status", "permission",
+                report(props.sessionID, "status", "permission",
                   short(props.title || props.type || ""), "paused",
                   "waiting for a human decision")
               } else if (type === "session.deleted") {
-                const agent = sessionAgent(props.info?.id || props.sessionID, {})
-                if (agent) post("/api/status", { agent_id: agent.id, status: "done" })
+                const sessionID = props.info?.id || props.sessionID
+                const agent = sessionAgent(sessionID, {}, directory)
+                if (agent) post("/api/status",
+                  { agent_id: agent.id, status: "done", cwd: where(sessionID) })
               }
             } catch {
               /* one bad event must not stop the stream */

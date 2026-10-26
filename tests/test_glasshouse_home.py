@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import re
+import subprocess
+import sys
 from pathlib import Path
 
 import pytest
@@ -190,6 +192,34 @@ def test_privacy_scanner_finds_private_text(tmp_path):
     assert "GitHub token" in kinds
 
 
+def test_the_published_tree_needs_no_plugin_it_does_not_ship(gh, tmp_path):
+    """Configuring an uninstalled plugin must not ship to the public tree.
+
+    Reproduced 2026-10-26: ``asyncio_mode = "auto"`` — a leftover from the
+    browser project, which runs ``pytest-asyncio`` — was in the exported
+    ``pyproject.toml``. Anyone running the published test suite therefore got
+    ``Unknown config option: asyncio_mode`` before a single test ran, which
+    looks like a broken package rather than a stray line.
+
+    Checked by *running* pytest against the exported tree with that warning
+    promoted to an error, instead of guessing which option names are legal.
+    """
+    if not (Path(__file__).resolve().parents[1] / "docs" / "public" / "README.md").is_file():
+        pytest.skip("template sources are only present in the development checkout")
+    out = tmp_path / "public"
+    assert home.export_public(out)["ok"]
+
+    run = subprocess.run(
+        [sys.executable, "-m", "pytest", "--collect-only", "-q",
+         "-W", "error::pytest.PytestConfigWarning"],
+        cwd=out, capture_output=True, text=True,
+    )
+    assert run.returncode == 0, (
+        "the exported tree's pytest config references something it does not ship:\n"
+        + (run.stderr or run.stdout)
+    )
+
+
 def test_export_is_clean_and_complete(gh, tmp_path):
     """The real tree must be publishable: this is the privacy guarantee."""
     if not (Path(__file__).resolve().parents[1] / "docs" / "public" / "README.md").is_file():
@@ -253,6 +283,21 @@ def test_private_project_names_are_configurable(gh, tmp_path, monkeypatch):
     (tree / "notes.txt").write_text("built for secret-workspace\n", encoding="utf-8")
     kinds = {f["kind"] for f in home.privacy_scan(tree)}
     assert "private name" in kinds
+
+
+def test_the_tools_own_name_is_never_private(gh, monkeypatch):
+    """A folder named after the tool must not fail the tool's own export.
+
+    Reproduced 2026-10-26: running any `glass` command from the product folder
+    registered it as a project (correct — cwd selects the project), and every
+    later `glass export` then refused to publish, because the published README
+    naturally contains the product's own name. Registering your checkout must
+    never be able to lock you out of releasing it.
+    """
+    monkeypatch.setenv("GLASSHOUSE_PRIVATE_NAMES", f"secret-workspace,{home.APP}")
+    names = home.private_names()
+    assert home.APP not in names
+    assert "secret-workspace" in names
 
 
 def test_display_path_hides_the_home_prefix(monkeypatch):

@@ -123,7 +123,11 @@ class Handler(BaseHTTPRequestHandler):
         return data
 
     def _project(self, query: dict, body: dict | None = None):
-        """Resolve ?project=, else the session's project, else the last opened.
+        """Resolve ?project=, else the body's folder, else session, else last opened.
+
+        The folder a harness names wins over this server's "last opened": a
+        process can work in any folder, and its events belong to that folder's
+        board, not to whichever project the owner happened to look at last.
 
         ``?project=@none`` means the owner deliberately closed the project. That
         has to win over the "last opened" fallback, otherwise there is no way to
@@ -133,6 +137,9 @@ class Handler(BaseHTTPRequestHandler):
         if ref == "@none":
             return None
         if not ref and body:
+            named = home.get_project(str(body.get("cwd") or ""))
+            if named:
+                return named
             sessions = getattr(self.server, "session_project", None) or {}
             ref = sessions.get(str(body.get("session_id") or ""))
         try:

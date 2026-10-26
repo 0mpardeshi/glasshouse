@@ -117,6 +117,18 @@ def test_projects_page_explains_the_working_folder():
     assert "just added" in js, "a new folder must be visibly new"
 
 
+def test_the_plugin_reports_the_session_folder_not_the_process_cwd():
+    """B-006: process.cwd() is the harness binary's folder, not the project."""
+    plugin = (Path(__file__).resolve().parents[1]
+              / ".opencode/plugins/glasshouse/index.ts").read_text(encoding="utf-8")
+    assert "cwd: process.cwd()" not in plugin, \
+        "a session must register with the folder it is working in"
+    for call in ("/api/register", "/api/event", "/api/heartbeat"):
+        block = plugin[plugin.index(call):]
+        block = block[:block.index("})")]
+        assert "cwd" in block, f"{call} must say which folder it is about"
+
+
 # --------------------------------------------------------------------------- #
 # live behaviour
 # --------------------------------------------------------------------------- #
@@ -168,6 +180,46 @@ def test_agenda_add_writes_to_the_project_todo_and_returns_it(live):
     titles = {t["title"] for t in state["todos"]}
     assert "Wire the plus button" in titles
     assert "First item" in titles
+
+
+def test_an_event_is_filed_under_the_folder_that_sent_it(live, tmp_path):
+    """A harness reports from its own process cwd; the folder in the body decides.
+
+    B-006: every event from an OpenCode session landed in the project the
+    *server* last opened, so the board of the folder being worked in stayed
+    empty while another project's board filled up.
+    """
+    entry, port, folder = live
+    other = tmp_path / "other"
+    other.mkdir()
+    second = home.add_project(other)
+    home.add_project(folder)          # the live project opened most recently
+
+    status, body = _post(f"{home.server_url(port)}/api/event",
+                         {"kind": "tool.call", "agent_id": "a1", "action": "read",
+                          "target": "x.py", "cwd": str(other)})
+    assert status == 200, body
+
+    mine = home.get_json(f"{home.server_url(port)}/api/state?project={second['id']}") or {}
+    assert [e["kind"] for e in mine["events"]] == ["tool.call"]
+    elsewhere = home.get_json(f"{home.server_url(port)}/api/state?project={entry['id']}") or {}
+    assert elsewhere["events"] == [], "an event must not be copied into another project"
+
+
+def test_an_event_from_an_unregistered_folder_falls_back_to_the_active_project(live, tmp_path):
+    """An unknown cwd must not 400 or invent a project."""
+    entry, port, folder = live
+    active = (home.get_json(f"{home.server_url(port)}/api/projects") or {})["active"]
+
+    status, body = _post(f"{home.server_url(port)}/api/event",
+                         {"kind": "note", "agent_id": "a1", "target": "hello",
+                          "cwd": str(tmp_path / "never-registered")})
+    assert status == 200, body
+
+    state = home.get_json(f"{home.server_url(port)}/api/state?project={active['id']}") or {}
+    assert [e["kind"] for e in state["events"]] == ["note"]
+    assert {p["id"] for p in home.list_projects()} == {entry["id"]}, \
+        "reporting an event must never register a folder"
 
 
 def test_a_bad_folder_is_refused_with_a_reason(live):

@@ -85,6 +85,10 @@ def private_names() -> set[str]:
                 names.add(name)
     except Exception:  # noqa: BLE001 - a broken registry must not block a scan
         pass
+    # The tool's own name has to appear in its own README, licence and paths, so
+    # a checkout named after the product must never become a privacy finding —
+    # otherwise registering your own folder locks you out of releasing it.
+    names = {n for n in names if n.lower() != APP.lower()}
     return names
 
 

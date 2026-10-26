@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "glasshouse"
-version = "0.2.0"
+version = "0.3.0"
 description = "A local, dependency-free control room for AI agents: append-only, hash-chained, project-scoped."
 readme = "README.md"
 requires-python = ">=3.10"
@@ -30,6 +30,3 @@ packages = ["glasshouse"]
 
 [tool.setuptools.package-data]
 glasshouse = ["static/*"]
-
-[tool.pytest.ini_options]
-asyncio_mode = "auto"

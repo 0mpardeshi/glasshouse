@@ -10,4 +10,4 @@ Projects are folders. Each folder keeps its own history under
 project can be committed or published without leaking a local history.
 """
 
-__version__ = "0.2.0"
+__version__ = "0.3.0"
